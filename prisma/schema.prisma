@@ -1,0 +1,132 @@
+// Prisma schema for QueueLess
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  STAFF
+  BUSINESS_ADMIN
+  PLATFORM_ADMIN
+}
+
+enum QueueStatus {
+  ACTIVE
+  PAUSED
+  CLOSED
+}
+
+enum EntryStatus {
+  WAITING
+  CALLED
+  SERVING
+  SERVED
+  SKIPPED
+  CANCELLED
+}
+
+model User {
+  id           String       @id @default(cuid())
+  name         String
+  email        String       @unique
+  phone        String?
+  passwordHash String
+  role         Role         @default(CUSTOMER)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  businesses   Business[]
+  queueEntries QueueEntry[]
+  staff        Staff?
+
+  @@index([email])
+  @@index([role])
+}
+
+model Business {
+  id        String   @id @default(cuid())
+  name      String
+  category  String?
+  address   String?
+  ownerId   String
+  createdAt DateTime @default(now())
+
+  owner  User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  queues Queue[]
+  staff  Staff[]
+
+  @@index([ownerId])
+}
+
+model Queue {
+  id                 String      @id @default(cuid())
+  businessId         String
+  name               String
+  description        String?
+  status             QueueStatus @default(ACTIVE)
+  averageServiceTime Int         @default(5) // in minutes
+  maxCapacity        Int         @default(100)
+  currentToken       Int         @default(0) // last issued token number
+  createdAt          DateTime    @default(now())
+
+  business Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  entries  QueueEntry[]
+
+  @@index([businessId])
+  @@index([status])
+}
+
+model QueueEntry {
+  id          String      @id @default(cuid())
+  queueId     String
+  customerId  String?
+  customerName String?
+  customerPhone String?
+  tokenNumber Int
+  status      EntryStatus @default(WAITING)
+  joinedAt    DateTime    @default(now())
+  calledAt    DateTime?
+  servedAt    DateTime?
+
+  queue      Queue        @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  customer   User?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  serviceLog ServiceLog?
+
+  @@unique([queueId, tokenNumber])
+  @@index([queueId, status])
+  @@index([customerId])
+  @@index([joinedAt])
+}
+
+model Staff {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  businessId String
+  createdAt  DateTime @default(now())
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business    Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  serviceLogs ServiceLog[]
+
+  @@index([businessId])
+}
+
+model ServiceLog {
+  id           String    @id @default(cuid())
+  queueEntryId String    @unique
+  staffId      String
+  serviceStart DateTime  @default(now())
+  serviceEnd   DateTime?
+
+  queueEntry QueueEntry @relation(fields: [queueEntryId], references: [id], onDelete: Cascade)
+  staff      Staff      @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId])
+  @@index([serviceStart])
+}
+
