@@ -8,10 +8,11 @@ export function SocketProvider({ children }) {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    // In development Vite proxies websocket to localhost:3001
-    const serverUrl = import.meta.env.VITE_SOCKET_URL || (
-      window.location.port === '5173' ? 'http://localhost:3001' : window.location.origin
-    );
+    // Determine the socket server URL
+    const serverUrl =
+      import.meta.env.VITE_SOCKET_URL ||
+      import.meta.env.VITE_API_URL ||
+      (window.location.port === '5173' ? 'http://localhost:3001' : window.location.origin);
 
     const socketInstance = io(serverUrl, {
       transports: ['websocket', 'polling'],

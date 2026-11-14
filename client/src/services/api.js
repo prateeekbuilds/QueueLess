@@ -1,4 +1,5 @@
 const TOKEN_KEY = 'queueless_token';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -14,8 +15,13 @@ export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
 }
 
-async function request(url, options = {}) {
+async function request(endpoint, options = {}) {
   const token = getToken();
+
+  // If endpoint is relative and API_BASE_URL is set, prepend it
+  const url = endpoint.startsWith('http')
+    ? endpoint
+    : `${API_BASE_URL}${endpoint}`;
 
   const headers = {
     'Content-Type': 'application/json',
@@ -36,13 +42,10 @@ async function request(url, options = {}) {
     throw new Error('Network error. Please check your connection and server status.');
   }
 
-  // Handle 401: clear token, but don't hard reload if already on auth page or checking me
+  // Handle 401
   if (response.status === 401) {
-    if (token && !url.includes('/api/auth/login') && !url.includes('/api/auth/register')) {
+    if (token && !endpoint.includes('/api/auth/login') && !endpoint.includes('/api/auth/register')) {
       clearToken();
-      if (!window.location.pathname.startsWith('/login')) {
-        // Softly clear token rather than force window.location hard reload loop
-      }
     }
   }
 
