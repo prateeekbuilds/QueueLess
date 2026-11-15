@@ -1,13 +1,14 @@
 {
   "name": "queueless",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
     "db:migrate": "npx prisma migrate dev",
     "db:generate": "npx prisma generate",
-    "db:seed": "npx prisma db seed",
+    "db:seed": "node prisma/seed.js",
     "db:studio": "npx prisma studio",
     "install:all": "npm install && cd server && npm install && cd ../client && npm install"
   },
@@ -22,4 +23,3 @@
     "seed": "node prisma/seed.js"
   }
 }
-
