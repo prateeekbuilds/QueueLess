@@ -8,11 +8,9 @@ let io = null;
  * @returns {SocketIOServer}
  */
 export const initializeSocket = (httpServer) => {
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: [clientUrl, 'http://localhost:5173', 'http://localhost:3000'],
+      origin: (origin, callback) => callback(null, true),
       methods: ['GET', 'POST'],
       credentials: true,
     },
@@ -86,4 +84,3 @@ export default {
   emitQueueUpdate,
   emitEntryUpdate,
 };
-

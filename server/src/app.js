@@ -19,26 +19,28 @@ const httpServer = http.createServer(app);
 // Initialize Socket.io
 initializeSocket(httpServer);
 
-// CORS configuration
-const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+// Robust CORS configuration supporting Vercel and all client origins
 app.use(
   cors({
-    origin: [clientUrl, 'http://localhost:5173', 'http://localhost:3000'],
+    origin: (origin, callback) => {
+      // Allow any origin for maximum deployment flexibility
+      callback(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   })
 );
 
 // Global Rate Limiter
 const globalLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || 300,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     success: false,
-    message: 'Too many requests from this IP, please try again later',
+    message: 'Too many requests, please try again later',
   },
 });
 app.use('/api', globalLimiter);
@@ -51,8 +53,17 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'QueueLess API is healthy',
+    message: 'QueueLess API is healthy and connected',
     timestamp: new Date().toISOString(),
+  });
+});
+
+// Root welcome endpoint
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'QueueLess API Service is running',
+    health: '/api/health',
   });
 });
 
@@ -74,7 +85,7 @@ app.use(errorHandler);
 // Start server
 const PORT = process.env.PORT || 3001;
 if (process.env.NODE_ENV !== 'test') {
-  httpServer.listen(PORT, () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 QueueLess Server running on port ${PORT}`);
     console.log(`📡 Socket.io ready for real-time connections`);
     console.log(`🌐 API Base URL: http://localhost:${PORT}/api`);
@@ -83,4 +94,3 @@ if (process.env.NODE_ENV !== 'test') {
 
 export { app, httpServer };
 export default app;
-
